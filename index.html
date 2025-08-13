@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Taiwan Veggie Price Tracker</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="container header">
+    <div class="brand">
+      <div class="logo">🥬</div>
+      <div>
+        <h1>Taiwan Veggie Price Tracker</h1>
+        <p class="sub">Open-Data Forecasting Dashboard（純前端，GitHub Pages 0 元）</p>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input id="q" type="search" placeholder="搜尋作物或市場，例如：甘藍、台北二…" />
+      <select id="cropFilter"><option value="">全部作物</option></select>
+      <select id="marketFilter"><option value="">全部市場</option></select>
+      <select id="sortBy">
+        <option value="recent">最近有資料優先</option>
+        <option value="delta_desc">預測漲幅 ▼</option>
+        <option value="delta_asc">預測跌幅 ▲</option>
+        <option value="alpha">名稱 A→Z</option>
+      </select>
+      <span id="count" class="muted"></span>
+    </div>
+
+    <div id="hint" class="hint muted" hidden></div>
+  </header>
+
+  <main class="container grid">
+    <aside>
+      <ul id="list" class="cards"></ul>
+      <div id="noResult" class="muted" hidden>沒有符合的項目，試試換個關鍵字或清除篩選。</div>
+    </aside>
+
+    <section id="detail">
+      <div class="panel empty">
+        從左側清單點一個品項查看詳細與走勢圖。
+        <div class="muted" id="buildInfo"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="container foot">
+    <small>資料來源：農業資料開放平臺（農產品交易行情）｜僅供教學研究</small>
+  </footer>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "--5936a1",
+    "crop": "芒果",
+    "market": "台北二",
+    "last_obs_date": "2025-08-12",
+    "last_price": 77.08182229110164,
+    "forecast_date": "2025-08-13",
+    "forecast_price": 77.57489689300006,
+    "best_model": "SVR-RBF"
+  }
+]
