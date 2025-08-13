@@ -33,4 +33,6 @@ h1{margin:0;font-size:28px}
 .foot{opacity:.65;text-align:center}
 canvas{background:#0b1220;border-radius:10px}
 .empty{opacity:.8}
+.btn{padding:10px 12px;border-radius:12px;border:1px solid var(--line2);background:#132042;color:var(--text);cursor:pointer}
+.btn:hover{filter:brightness(1.1)}
 @media (max-width:980px){.grid{grid-template-columns:1fr}}
