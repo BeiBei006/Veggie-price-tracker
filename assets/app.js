@@ -3,8 +3,8 @@ const fmtNTD = new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD',ma
 
 let ITEMS=[];          // 資料庫 index.json
 let chart;
-let quickReqId = 0;  // 用來識別最新的一次即時查詢請求
-
+let quickReqId = 0;    // 最新一次即時查詢請求的序號
+let quickBusy  = false; // 是否有即時查詢在執行中
 
 /* =========================
    載入資料庫（預先產生）
@@ -76,21 +76,22 @@ async function renderLibraryDetail(id){
 
   const title = `${d.crop}在${d.market}市場的平均交易行情（含 14 天預測）`;
 
-  // 完整歷史（不截斷 150 天），再接上 14 天預測
-  const hist = d.history;                     // [{date, price, volume}, ...] 150 天
-  const fc   = d.forecast_series || [];       // [{date, price}, ...] 14 天
+  // 完整歷史（你的 JSON 內含全部歷史），再接上 14 天預測
+  const hist = d.history;                     // [{date, price, volume}, ...]
+  const fc   = d.forecast_series || [];       // [{date, price}, ...]
 
   renderPanel({
     title,
     tag: '資料庫',
     history: hist,
-    forecast: fc
+    forecast: fc,
+    showConfidence: true    // 資料庫頁面顯示可信度
   });
 }
 
 /* ---------- 即時查詢（近 3 個交易日） ---------- */
 
-/* CORS 幫手：直接抓失敗就換代理重試（保留原樣） */
+/* CORS 幫手：直接抓失敗就換代理重試 */
 async function fetchJSONWithCors(url){
   try{
     const r = await fetch(url, {cache:'no-store'});
@@ -141,38 +142,6 @@ async function quickFetch3TradingDays(crop, market){
   return {crop, market, history};
 }
 
-/* ---------- 渲染：通用面板照舊（用現有的 renderPanel） ---------- */
-
-// 即時查詢：按鈕事件（加請求序號 + 上鎖，避免舊請求覆寫）
-$('#quickRunBtn').addEventListener('click', async ()=>{
-  const crop   = ($('#quickCrop').value||'').trim();
-  const market = ($('#quickMarket').value||'').trim() || '台北一';
-  if(!crop){ alert('請輸入作物名稱'); return; }
-
-  const req = ++quickReqId;           // 這次請求的序號
-  $('#quickRunBtn').disabled = true;  // 上鎖避免重複點
-  showLoading();                      // 立刻顯示「資料擷取中…」
-
-  try{
-    const d = await quickFetch3TradingDays(crop, market);
-    if (req !== quickReqId) return;   // 已有更新的查詢在進行中，丟棄舊結果
-    const title = `${d.crop}在${d.market}市場的平均交易行情（近 3 個交易日）`;
-    renderPanel({title, tag:'即時查詢', history:d.history, forecast:null});
-  }catch(e){
-    console.error(e);
-    if (req !== quickReqId) return;   // 舊請求的錯誤，不覆寫新畫面
-    $('#detail').innerHTML = '<div class="panel">查無資料，請確認作物/市場名稱。</div>';
-  }finally{
-    if (req === quickReqId) $('#quickRunBtn').disabled = false; // 只在最新請求結束時解鎖
-  }
-});
-
-
-// Enter 快捷維持不變
-$('#quickCrop').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#quickRunBtn').click(); });
-$('#quickMarket').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#quickRunBtn').click(); });
-
-
 /* =========================
    通用：可信度 + 圖表渲染
    ========================= */
@@ -190,33 +159,35 @@ function computeConfidence(history){
   return {score, coverage, cv: (stability? +( (1/stability -1).toFixed(2) ): null)};
 }
 
-function renderPanel({title, tag, history, forecast=null}){
+function renderPanel({title, tag, history, forecast=null, showConfidence=true}){
   const root = $('#detail');
-  const conf = computeConfidence(history);
 
   const startStr = history.find(x=>x.price!=null)?.date || history[0].date;
   const endStr   = [...history].reverse().find(x=>x.price!=null)?.date || history[history.length-1].date;
 
-  root.innerHTML = `
+  // Header（依 showConfidence 決定是否顯示）
+  let header = `
     <div class="panel">
       <h2 style="margin:0 0 6px">${title}</h2>
       <div class="row">
         <div class="kv">資料來源：<b>${tag}</b></div>
-        <div class="kv">區間：<b>${startStr} ~ ${endStr}</b></div>
-        <div class="kv">可信度：<b>${conf.score}</b>（完整度 ${conf.coverage}%${conf.cv!=null ? `、穩定度指標 ${conf.cv}`:''}）</div>
-      </div>
-      <canvas id="priceChart" height="260"></canvas>
-    </div>`;
+        <div class="kv">區間：<b>${startStr} ~ ${endStr}</b></div>`;
+  if (showConfidence){
+    const conf = computeConfidence(history);
+    header += `<div class="kv">可信度：<b>${conf.score}</b>（完整度 ${conf.coverage}%${conf.cv!=null ? `、穩定度指標 ${conf.cv}`:''}）</div>`;
+  }
+  header += `</div><canvas id="priceChart" height="260"></canvas></div>`;
+  root.innerHTML = header;
 
-  // 準備資料
-  let labels = history.map(x=>x.date);
+  // 資料
+  let labels   = history.map(x=>x.date);
   let histData = history.map(x=>x.price);
 
   let predDataPadded = null;
   if(forecast && forecast.length){
     const pred = forecast.map(x=>x.price);
     labels = labels.concat(forecast.map(x=>x.date));
-    predDataPadded = history.map(_=>null).concat(pred);  // 讓預測線接在後段
+    predDataPadded = history.map(_=>null).concat(pred);  // 預測線接在後段
   }
 
   const ctx = document.getElementById('priceChart').getContext('2d');
@@ -252,24 +223,42 @@ $('#cropFilter').addEventListener('change', renderLibraryList);
 $('#marketFilter').addEventListener('change', renderLibraryList);
 $('#sortBy').addEventListener('change', renderLibraryList);
 
-// 即時查詢（近 3 天）
+// 即時查詢：防重按 + 請求序號；不顯示「可信度」
 $('#quickRunBtn').addEventListener('click', async ()=>{
+  if (quickBusy) return;                      // 有工作在跑就忽略
   const crop   = ($('#quickCrop').value||'').trim();
   const market = ($('#quickMarket').value||'').trim() || '台北一';
   if(!crop){ alert('請輸入作物名稱'); return; }
 
-  $('#detail').innerHTML = '<div class="panel">資料擷取中…請稍候</div>';
+  const req = ++quickReqId;                   // 標記這次請求
+  quickBusy = true;
+  $('#quickRunBtn').disabled = true;          // 上鎖
+  showLoading();                              // 立即顯示「資料擷取中…」
+
   try{
-    const d = await quickFetch30d(crop, market);
-    const title = `${d.crop}在${d.market}市場的平均交易行情（近 30 天）`;
-    renderPanel({title, tag:'即時查詢', history:d.history, forecast:null});
+    const d = await quickFetch3TradingDays(crop, market);
+    if (req !== quickReqId) return;           // 有較新的請求在跑，丟棄舊結果
+    const title = `${d.crop}在${d.market}市場的平均交易行情（近 3 個交易日）`;
+    renderPanel({title, tag:'即時查詢', history:d.history, forecast:null, showConfidence:false});
   }catch(e){
     console.error(e);
+    if (req !== quickReqId) return;           // 舊請求的錯誤，不覆寫畫面
     $('#detail').innerHTML = '<div class="panel">查無資料，請確認作物/市場名稱。</div>';
+  }finally{
+    if (req === quickReqId) {                 // 只在最新請求結束時解鎖
+      $('#quickRunBtn').disabled = false;
+      quickBusy = false;
+    }
   }
 });
-$('#quickCrop').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#quickRunBtn').click(); });
-$('#quickMarket').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#quickRunBtn').click(); });
+
+// Enter 快捷（按鈕未上鎖時才觸發）
+$('#quickCrop').addEventListener('keydown', e=>{
+  if(e.key==='Enter' && !$('#quickRunBtn').disabled) $('#quickRunBtn').click();
+});
+$('#quickMarket').addEventListener('keydown', e=>{
+  if(e.key==='Enter' && !$('#quickRunBtn').disabled) $('#quickRunBtn').click();
+});
 
 /* 啟動 */
 loadIndex();
