@@ -82,11 +82,9 @@ async function renderLibraryDetail(id){
   });
 }
 
-/* =========================
-   即時查詢：近 30 天（日曆日）量加權均價
-   ========================= */
+/* ---------- 即時查詢（近 3 個交易日） ---------- */
 
-// CORS 幫手：直接抓失敗就換代理重試
+/* CORS 幫手：直接抓失敗就換代理重試（保留原樣） */
 async function fetchJSONWithCors(url){
   try{
     const r = await fetch(url, {cache:'no-store'});
@@ -100,23 +98,16 @@ async function fetchJSONWithCors(url){
     for(const to of proxies){
       try{
         const r = await fetch(to(url), {cache:'no-store'});
-        if(r.ok){ const t=await r.text(); return JSON.parse(t); }
+        if(r.ok){ const t = await r.text(); return JSON.parse(t); }
       }catch(_){}
     }
     throw e;
   }
 }
 
-// 轉 ROC：yyyy-mm-dd → 114-08-13 這種格式
-function toRocYmd(d){
-  const y = String(d.getFullYear()-1911).padStart(3,'0');
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const day = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
-
-async function quickFetch30d(crop, market){
-  const end   = new Date(); end.setHours(0,0,0,0);
+// 近 3 個「交易日」：抓近 180 天，彙整每個有成交的日期，取最後 3 天
+async function quickFetch3TradingDays(crop, market){
+  const end = new Date(); end.setHours(0,0,0,0);
   const start = new Date(end); start.setDate(end.getDate()-180);
 
   const roc = d => `${d.getFullYear()-1911}`.padStart(3,'0') + "." + `${d.getMonth()+1}`.padStart(2,'0') + "." + `${d.getDate()}`.padStart(2,'0');
@@ -124,33 +115,49 @@ async function quickFetch30d(crop, market){
 
   const raw = await fetchJSONWithCors(url);
 
-  // 依「交易日期」彙成「交易量加權平均價」
+  // 過濾同品名；把每個「交易日期」的交易量加權平均價彙整
   const rows = raw.filter(r => r["作物名稱"]?.includes(crop) && +r["平均價"]>0 && +r["交易量"]>0);
-  const dict = new Map(); // key: '114-08-13'  value: 加權均價
+  const map = new Map(); // key: '114-08-13'（ROC-YYYY-MM-DD），value: {pv, v}
   for(const r of rows){
-    const d = r["交易日期"].replace(/\./g,'-'); // e.g., 114-08-13
+    const d = r["交易日期"].replace(/\./g,'-');      // e.g., 114-08-13
     const p = +r["平均價"], v = +r["交易量"];
-    if(!dict.has(d)) dict.set(d,{pv:0,v:0});
-    dict.get(d).pv += p*v; dict.get(d).v += v;
+    if(!map.has(d)) map.set(d,{pv:0,v:0});
+    const o = map.get(d); o.pv += p*v; o.v += v;
   }
 
-  // 產生「最後 30 個日曆日」的完整時軸，缺資料日填 null（Chart.js 會出現缺口）
-  const labels = [];
-  for(let i=29;i>=0;i--){
-    const d = new Date(end); d.setDate(end.getDate()-i);
-    labels.push(toRocYmd(d));
-  }
-  const history = labels.map(date => {
-    const obj = dict.get(date);
-    const price = obj ? (obj.pv/obj.v) : null;
-    return {date, price};
-  });
+  // 轉為陣列並依日期排序後取最後 3 天（交易日）
+  const all = Array.from(map.entries())
+                   .map(([date,{pv,v}]) => ({date, price: pv/v}))
+                   .sort((a,b)=> a.date.localeCompare(b.date));
+  const history = all.slice(-3);
 
-  // 若 30 天全空，視為查不到
-  if(history.every(x => x.price==null)) throw new Error('no data');
-
+  if(!history.length) throw new Error('no data');
   return {crop, market, history};
 }
+
+/* ---------- 渲染：通用面板照舊（用現有的 renderPanel） ---------- */
+
+// 即時查詢：按鈕事件（只改成呼叫 3 交易日版本，標題也更新）
+$('#quickRunBtn').addEventListener('click', async ()=>{
+  const crop   = ($('#quickCrop').value||'').trim();
+  const market = ($('#quickMarket').value||'').trim() || '台北一';
+  if(!crop){ alert('請輸入作物名稱'); return; }
+
+  $('#detail').innerHTML = '<div class="panel">資料擷取中…</div>';
+  try{
+    const d = await quickFetch3TradingDays(crop, market);
+    const title = `${d.crop}在${d.market}市場的平均交易行情（近 3 個交易日）`;
+    renderPanel({title, tag:'即時查詢', history:d.history, forecast:null});
+  }catch(e){
+    console.error(e);
+    $('#detail').innerHTML = '<div class="panel">查無資料，請確認作物/市場名稱。</div>';
+  }
+});
+
+// Enter 快捷維持不變
+$('#quickCrop').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#quickRunBtn').click(); });
+$('#quickMarket').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#quickRunBtn').click(); });
+
 
 /* =========================
    通用：可信度 + 圖表渲染
