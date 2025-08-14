@@ -3,6 +3,8 @@ const fmtNTD = new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD',ma
 
 let ITEMS=[];          // 資料庫 index.json
 let chart;
+let quickReqId = 0;  // 用來識別最新的一次即時查詢請求
+
 
 /* =========================
    載入資料庫（預先產生）
@@ -21,6 +23,10 @@ async function loadIndex(){
       1) 網站部署在 GitHub Pages（不要用 file://）。<br>
       2) <code>data</code> 內有 <code>index.json</code> 與各品項的 <code>*.json</code>。`;
   }
+}
+
+function showLoading() {
+  $('#detail').innerHTML = '<div class="panel">資料擷取中…</div>';
 }
 
 function initFilters(items){
@@ -137,22 +143,30 @@ async function quickFetch3TradingDays(crop, market){
 
 /* ---------- 渲染：通用面板照舊（用現有的 renderPanel） ---------- */
 
-// 即時查詢：按鈕事件（只改成呼叫 3 交易日版本，標題也更新）
+// 即時查詢：按鈕事件（加請求序號 + 上鎖，避免舊請求覆寫）
 $('#quickRunBtn').addEventListener('click', async ()=>{
   const crop   = ($('#quickCrop').value||'').trim();
   const market = ($('#quickMarket').value||'').trim() || '台北一';
   if(!crop){ alert('請輸入作物名稱'); return; }
 
-  $('#detail').innerHTML = '<div class="panel">資料擷取中…</div>';
+  const req = ++quickReqId;           // 這次請求的序號
+  $('#quickRunBtn').disabled = true;  // 上鎖避免重複點
+  showLoading();                      // 立刻顯示「資料擷取中…」
+
   try{
     const d = await quickFetch3TradingDays(crop, market);
+    if (req !== quickReqId) return;   // 已有更新的查詢在進行中，丟棄舊結果
     const title = `${d.crop}在${d.market}市場的平均交易行情（近 3 個交易日）`;
     renderPanel({title, tag:'即時查詢', history:d.history, forecast:null});
   }catch(e){
     console.error(e);
+    if (req !== quickReqId) return;   // 舊請求的錯誤，不覆寫新畫面
     $('#detail').innerHTML = '<div class="panel">查無資料，請確認作物/市場名稱。</div>';
+  }finally{
+    if (req === quickReqId) $('#quickRunBtn').disabled = false; // 只在最新請求結束時解鎖
   }
 });
+
 
 // Enter 快捷維持不變
 $('#quickCrop').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#quickRunBtn').click(); });
