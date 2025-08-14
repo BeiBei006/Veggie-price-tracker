@@ -26,7 +26,7 @@ async function loadIndex(){
 }
 
 function showLoading() {
-  $('#detail').innerHTML = '<div class="panel">資料擷取中…請稍候</div>';
+  $('#detail').innerHTML = '<div class="panel">資料擷取中…請稍候(由於資料量較大，大約需要30-60秒)</div>';
 }
 
 function initFilters(items){
@@ -91,55 +91,63 @@ async function renderLibraryDetail(id){
 
 /* ---------- 即時查詢（近 3 個交易日） ---------- */
 
-/* CORS 幫手：直接抓失敗就換代理重試 */
-async function fetchJSONWithCors(url){
-  try{
-    const r = await fetch(url, {cache:'no-store'});
-    if(!r.ok) throw new Error(r.status+' '+r.statusText);
-    return await r.json();
-  }catch(e){
-    const proxies = [
-      u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-      u => `https://cors.isomorphic-git.org/${u}`
-    ];
-    for(const to of proxies){
-      try{
-        const r = await fetch(to(url), {cache:'no-store'});
-        if(r.ok){ const t = await r.text(); return JSON.parse(t); }
-      }catch(_){}
-    }
-    throw e;
-  }
-}
-
-// 近 3 個「交易日」：抓近 180 天，彙整每個有成交的日期，取最後 3 天
+// 近 3 個「交易日」：優先抓 10 天，不足再自動擴大到 30/60/120/180 天
 async function quickFetch3TradingDays(crop, market){
-  const end = new Date(); end.setHours(0,0,0,0);
-  const start = new Date(end); start.setDate(end.getDate()-180);
+  // 想完全只抓 10 天，把陣列改成 [10] 即可（速度最快，但較容易遇到不足 3 天）
+  const WINDOWS = [10, 30, 60, 120, 180];
+  let history = [];
 
-  const roc = d => `${d.getFullYear()-1911}`.padStart(3,'0') + "." + `${d.getMonth()+1}`.padStart(2,'0') + "." + `${d.getDate()}`.padStart(2,'0');
-  const url = `https://data.moa.gov.tw/Service/OpenData/FromM/FarmTransData.aspx?$top=1000&$skip=0&StartDate=${roc(start)}&EndDate=${roc(end)}&Market=${encodeURIComponent(market)}`;
+  for (const days of WINDOWS) {
+    const end = new Date(); end.setHours(0,0,0,0);
+    const start = new Date(end); start.setDate(end.getDate() - days);
 
-  const raw = await fetchJSONWithCors(url);
+    const roc = d => `${d.getFullYear()-1911}`.padStart(3,'0') + "." + `${d.getMonth()+1}`.padStart(2,'0') + "." + `${d.getDate()}`.padStart(2,'0');
+    const url = `https://data.moa.gov.tw/Service/OpenData/FromM/FarmTransData.aspx?$top=1000&$skip=0&StartDate=${roc(start)}&EndDate=${roc(end)}&Market=${encodeURIComponent(market)}`;
 
-  // 過濾同品名；把每個「交易日期」的交易量加權平均價彙整
-  const rows = raw.filter(r => r["作物名稱"]?.includes(crop) && +r["平均價"]>0 && +r["交易量"]>0);
-  const map = new Map(); // key: '114-08-13'（ROC-YYYY-MM-DD），value: {pv, v}
-  for(const r of rows){
-    const d = r["交易日期"].replace(/\./g,'-');      // e.g., 114-08-13
-    const p = +r["平均價"], v = +r["交易量"];
-    if(!map.has(d)) map.set(d,{pv:0,v:0});
-    const o = map.get(d); o.pv += p*v; o.v += v;
+    const raw = await fetchJSONWithCors(url);
+
+    // 欄位容錯：不同資料版本可能用另一組欄名
+    const getNum = (obj, ...keys) => {
+      for (const k of keys) if (obj[k] != null && obj[k] !== '' && !Number.isNaN(+obj[k])) return +obj[k];
+      return NaN;
+    };
+    const getStr = (obj, ...keys) => {
+      for (const k of keys) if (obj[k] != null) return String(obj[k]);
+      return '';
+    };
+
+    // 過濾同品名；把每個「交易日期」的交易量加權平均價彙整
+    const rows = raw.filter(r => {
+      const name = getStr(r, "作物名稱", "作物");
+      const price = getNum(r, "平均價", "平均價(元/公斤)");
+      const vol   = getNum(r, "交易量", "交易量(公斤)");
+      return name.includes(crop) && price > 0 && vol > 0;
+    });
+
+    const map = new Map(); // key: '114-08-13'（ROC-YYYY-MM-DD），value: {pv, v}
+    for (const r of rows) {
+      const dateStr = getStr(r, "交易日期", "Date").replace(/\./g, '-'); // e.g., 114-08-13
+      const p = getNum(r, "平均價", "平均價(元/公斤)");
+      const v = getNum(r, "交易量", "交易量(公斤)");
+      if (!map.has(dateStr)) map.set(dateStr, { pv: 0, v: 0 });
+      const o = map.get(dateStr);
+      o.pv += p * v;
+      o.v  += v;
+    }
+
+    // 依日期排序後取最後 3 天（交易日）
+    const all = Array.from(map.entries())
+      .map(([date,{pv,v}]) => ({ date, price: pv / v }))
+      .sort((a,b) => a.date.localeCompare(b.date));
+
+    history = all.slice(-3);
+
+    // 若湊足 3 天就提早結束；否則擴大時間窗再試一次
+    if (history.length >= 3) break;
   }
 
-  // 轉為陣列並依日期排序後取最後 3 天（交易日）
-  const all = Array.from(map.entries())
-                   .map(([date,{pv,v}]) => ({date, price: pv/v}))
-                   .sort((a,b)=> a.date.localeCompare(b.date));
-  const history = all.slice(-3);
-
-  if(!history.length) throw new Error('no data');
-  return {crop, market, history};
+  if (!history.length) throw new Error('no data');
+  return { crop, market, history };
 }
 
 /* =========================
