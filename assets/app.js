@@ -252,13 +252,13 @@ $('#cropFilter').addEventListener('change', renderLibraryList);
 $('#marketFilter').addEventListener('change', renderLibraryList);
 $('#sortBy').addEventListener('change', renderLibraryList);
 
-// 即時查詢（近 30 天）
+// 即時查詢（近 3 天）
 $('#quickRunBtn').addEventListener('click', async ()=>{
   const crop   = ($('#quickCrop').value||'').trim();
   const market = ($('#quickMarket').value||'').trim() || '台北一';
   if(!crop){ alert('請輸入作物名稱'); return; }
 
-  $('#detail').innerHTML = '<div class="panel">資料擷取中…</div>';
+  $('#detail').innerHTML = '<div class="panel">資料擷取中…請稍候</div>';
   try{
     const d = await quickFetch30d(crop, market);
     const title = `${d.crop}在${d.market}市場的平均交易行情（近 30 天）`;
