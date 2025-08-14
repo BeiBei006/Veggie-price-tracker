@@ -17,40 +17,53 @@
       </div>
     </div>
 
-    <div class="toolbar">
-      <input id="q" type="search" placeholder="搜尋作物或市場，例如：甘藍、台北一…" />
-      <select id="cropFilter"><option value="">全部作物</option></select>
-      <select id="marketFilter"><option value="">全部市場</option></select>
-      <select id="sortBy">
-        <option value="recent">最近有資料優先</option>
-        <option value="delta_desc">預測漲幅 ▼</option>
-        <option value="delta_asc">預測跌幅 ▲</option>
-        <option value="alpha">名稱 A→Z</option>
-      </select>
-      <span id="count" class="muted"></span>
+    <!-- 區塊 A：資料庫搜尋（離線產生的清單） -->
+    <div class="section">
+      <div class="section-title">資料庫搜尋（預先產生的品項）</div>
+      <div class="toolbar">
+        <input id="qLib" type="search" placeholder="搜尋作物或市場，例如：甘藍、台北二…" />
+        <select id="cropFilter"><option value="">全部作物</option></select>
+        <select id="marketFilter"><option value="">全部市場</option></select>
+        <select id="sortBy">
+          <option value="recent">最近更新優先</option>
+          <option value="alpha">名稱 A→Z</option>
+        </select>
+        <span id="count" class="muted"></span>
+      </div>
+      <div id="hint" class="hint muted" hidden></div>
     </div>
 
-    <div id="hint" class="hint muted" hidden></div>
-    <div class="hint muted">找不到想要的組合？試試「即時快速預測」：</div>
-    <button id="quickBtn" class="btn">對目前搜尋關鍵字做快速預測（瀏覽器端）</button>
+    <!-- 區塊 B：即時查詢（現抓近30天行情，不做預測） -->
+    <div class="section">
+      <div class="section-title">即時查詢（近 30 天平均交易行情）</div>
+      <div class="toolbar">
+        <input id="quickCrop" type="search" placeholder="作物，如：芒果、甘藍…" />
+        <input id="quickMarket" type="search" placeholder="市場，如：台北一、台北二…" />
+        <button id="quickRunBtn" class="btn">查詢</button>
+      </div>
+      <div class="muted">說明：即時查詢會從政府開放資料即時抓取近 180 天資料，彙整近 30 天的「交易量加權平均價」並繪圖。</div>
+    </div>
   </header>
 
   <main class="container grid">
     <aside>
       <ul id="list" class="cards"></ul>
-      <div id="noResult" class="muted" hidden>沒有符合的項目，試試換個關鍵字或清除篩選。</div>
+      <div id="noResult" class="muted" hidden>沒有符合的項目，請變更關鍵字或清除篩選。</div>
     </aside>
 
     <section id="detail">
       <div class="panel empty">
-        從左側清單點一個品項查看詳細與走勢圖。
+        從左側清單點一個品項（資料庫），或在上方「即時查詢」輸入作物＋市場後按查詢。
         <div class="muted" id="buildInfo"></div>
       </div>
     </section>
   </main>
 
   <footer class="container foot">
-    <small>資料來源：農業資料開放平臺（農產品交易行情）｜僅供教學研究</small>
+    <small>
+      資料來源：農業資料開放平臺（農產品交易行情）｜僅供教學研究<br/>
+      製作：張倍瑚（brave519.ee12@nycu.edu.tw）
+    </small>
   </footer>
 
   <script src="assets/app.js"></script>
