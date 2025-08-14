@@ -1,21 +1,24 @@
 :root{
   --bg:#0b1220; --panel:#0f1629; --line:#223; --line2:#2a3a66;
-  --text:#e8eef5; --muted:#9aa7bd; --green:#27c192; --red:#f06292; --accent:#7aa2ff;
+  --text:#e8eef5; --muted:#9aa7bd; --accent:#7aa2ff;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif}
 .container{max-width:1160px;margin:0 auto;padding:18px}
 .header{padding-top:12px}
-.brand{display:flex;gap:12px;align-items:center;margin-bottom:8px}
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:6px}
 .logo{width:42px;height:42px;display:grid;place-items:center;font-size:28px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
 h1{margin:0;font-size:28px}
 .sub{margin:2px 0 0;opacity:.75}
+.section{margin-top:14px}
+.section-title{font-weight:700;margin-bottom:6px}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 2px}
 .toolbar input,.toolbar select{
   padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);
 }
-.toolbar input{flex:1;min-width:240px}
+.toolbar input{flex:1;min-width:220px}
 .muted{color:var(--muted)}
 .hint{margin-top:6px;padding:10px;border:1px dashed var(--line2);border-radius:12px;background:#0e1530}
 .grid{display:grid;grid-template-columns:360px 1fr;gap:16px}
@@ -25,14 +28,18 @@ h1{margin:0;font-size:28px}
 .card .title{font-weight:700;margin:0 0 2px}
 .card .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#132042;border:1px solid var(--line2);font-size:12px}
-.badge.up{background:rgba(39,193,146,.12);border-color:#1c8c6d}
-.badge.down{background:rgba(240,98,146,.12);border-color:#b94168}
 .panel{padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
 .row{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
 .kv{padding:8px 10px;border:1px solid var(--line2);border-radius:10px}
-.foot{opacity:.65;text-align:center}
-canvas{background:#0b1220;border-radius:10px}
-.empty{opacity:.8}
+.foot{opacity:.7;text-align:center}
+.empty{opacity:.85}
 .btn{padding:10px 12px;border-radius:12px;border:1px solid var(--line2);background:#132042;color:var(--text);cursor:pointer}
-.btn:hover{filter:brightness(1.1)}
-@media (max-width:980px){.grid{grid-template-columns:1fr}}
+.btn:hover{filter:brightness(1.06)}
+canvas{background:#0b1220;border-radius:10px}
+
+/* Chart.js 顏色強化（網格/刻度） */
+:root{
+  --grid:#ffffff14;         /* 網格線：白色 8% 透明 */
+  --tick:#d6deffcc;        /* 刻度字 */
+  --legend:#e8eef5;        /* 圖例字 */
+}
