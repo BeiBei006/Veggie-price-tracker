@@ -26,7 +26,7 @@ async function loadIndex(){
 }
 
 function showLoading() {
-  $('#detail').innerHTML = '<div class="panel">資料擷取中…</div>';
+  $('#detail').innerHTML = '<div class="panel">資料擷取中…請稍候</div>';
 }
 
 function initFilters(items){
