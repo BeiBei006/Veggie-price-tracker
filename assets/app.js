@@ -91,10 +91,31 @@ async function renderLibraryDetail(id){
 
 /* ---------- 即時查詢（近 3 個交易日） ---------- */
 
+/* CORS 幫手：直接抓失敗就換代理重試（保留原樣） */
+async function fetchJSONWithCors(url){
+  try{
+    const r = await fetch(url, {cache:'no-store'});
+    if(!r.ok) throw new Error(r.status+' '+r.statusText);
+    return await r.json();
+  }catch(e){
+    const proxies = [
+      u => https://api.allorigins.win/raw?url=${encodeURIComponent(u)},
+      u => https://cors.isomorphic-git.org/${u}
+    ];
+    for(const to of proxies){
+      try{
+        const r = await fetch(to(url), {cache:'no-store'});
+        if(r.ok){ const t = await r.text(); return JSON.parse(t); }
+      }catch(_){}
+    }
+    throw e;
+  }
+}
+
 // 近 3 個「交易日」：抓近 180 天，彙整每個有成交的日期，取最後 3 天
 async function quickFetch3TradingDays(crop, market){
   const end = new Date(); end.setHours(0,0,0,0);
-  const start = new Date(end); start.setDate(end.getDate()-180);
+  const start = new Date(end); start.setDate(end.getDate()-20);
 
   const roc = d => ${d.getFullYear()-1911}.padStart(3,'0') + "." + ${d.getMonth()+1}.padStart(2,'0') + "." + ${d.getDate()}.padStart(2,'0');
   const url = https://data.moa.gov.tw/Service/OpenData/FromM/FarmTransData.aspx?$top=1000&$skip=0&StartDate=${roc(start)}&EndDate=${roc(end)}&Market=${encodeURIComponent(market)};
@@ -110,6 +131,17 @@ async function quickFetch3TradingDays(crop, market){
     if(!map.has(d)) map.set(d,{pv:0,v:0});
     const o = map.get(d); o.pv += p*v; o.v += v;
   }
+
+  // 轉為陣列並依日期排序後取最後 3 天（交易日）
+  const all = Array.from(map.entries())
+                   .map(([date,{pv,v}]) => ({date, price: pv/v}))
+                   .sort((a,b)=> a.date.localeCompare(b.date));
+  const history = all.slice(-3);
+
+  if(!history.length) throw new Error('no data');
+  return {crop, market, history};
+}
+
 
 /* =========================
    通用：可信度 + 圖表渲染
