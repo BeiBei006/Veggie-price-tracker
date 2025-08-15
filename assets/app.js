@@ -26,7 +26,7 @@ async function loadIndex(){
 }
 
 function showLoading() {
-  $('#detail').innerHTML = '<div class="panel">資料擷取中…請稍候</div>';
+  $('#detail').innerHTML = '<div class="panel">資料擷取中…</div>';
 }
 
 function initFilters(items){
@@ -115,7 +115,7 @@ async function fetchJSONWithCors(url){
 // 近 3 個「交易日」：抓近 180 天，彙整每個有成交的日期，取最後 3 天
 async function quickFetch3TradingDays(crop, market){
   const end = new Date(); end.setHours(0,0,0,0);
-  const start = new Date(end); start.setDate(end.getDate()-20);
+  const start = new Date(end); start.setDate(end.getDate()-180);
 
   const roc = d => `${d.getFullYear()-1911}`.padStart(3,'0') + "." + `${d.getMonth()+1}`.padStart(2,'0') + "." + `${d.getDate()}`.padStart(2,'0');
   const url = `https://data.moa.gov.tw/Service/OpenData/FromM/FarmTransData.aspx?$top=1000&$skip=0&StartDate=${roc(start)}&EndDate=${roc(end)}&Market=${encodeURIComponent(market)}`;
