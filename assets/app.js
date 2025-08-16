@@ -26,7 +26,7 @@ async function loadIndex(){
 }
 
 function showLoading() {
-  $('#detail').innerHTML = '<div class="panel">資料擷取中…</div>';
+  $('#detail').innerHTML = '<div class="panel">資料擷取中…請稍後</div>';
 }
 
 function initFilters(items){
@@ -85,7 +85,7 @@ async function renderLibraryDetail(id){
     tag: '資料庫',
     history: hist,
     forecast: fc,
-    showConfidence: true    // 資料庫頁面顯示可信度
+    showConfidence: false    // 資料庫頁面顯示可信度
   });
 }
 
