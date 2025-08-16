@@ -166,7 +166,6 @@ function renderPanel({title, tag, history, forecast=null, showConfidence=true}){
   const endStr   = [...history].reverse().find(x=>x.price!=null)?.date || history[history.length-1].date;
 
   // Header（依 showConfidence 決定是否顯示）
-  showConfidence = false;
   let header = `
     <div class="panel">
       <h2 style="margin:0 0 6px">${title}</h2>
