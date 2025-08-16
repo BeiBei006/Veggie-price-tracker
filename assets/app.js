@@ -172,10 +172,10 @@ function renderPanel({title, tag, history, forecast=null, showConfidence=true}){
       <div class="row">
         <div class="kv">資料來源：<b>${tag}</b></div>
         <div class="kv">區間：<b>${startStr} ~ ${endStr}</b></div>`;
-  if (showConfidence){
+  /*if (showConfidence){
     const conf = computeConfidence(history);
     header += `<div class="kv">可信度：<b>${conf.score}</b>（完整度 ${conf.coverage}%${conf.cv!=null ? `、穩定度指標 ${conf.cv}`:''}）</div>`;
-  }
+  }*/
   header += `</div><canvas id="priceChart" height="260"></canvas></div>`;
   root.innerHTML = header;
 
