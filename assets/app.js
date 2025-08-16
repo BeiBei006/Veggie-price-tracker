@@ -26,7 +26,7 @@ async function loadIndex(){
 }
 
 function showLoading() {
-  $('#detail').innerHTML = '<div class="panel">資料擷取中…</div>';
+  $('#detail').innerHTML = '<div class="panel">資料擷取中…請稍後</div>';
 }
 
 function initFilters(items){
@@ -166,7 +166,7 @@ function renderPanel({title, tag, history, forecast=null, showConfidence=true}){
   const endStr   = [...history].reverse().find(x=>x.price!=null)?.date || history[history.length-1].date;
 
   // Header（依 showConfidence 決定是否顯示）
-  let header = `
+ /* let header = `
     <div class="panel">
       <h2 style="margin:0 0 6px">${title}</h2>
       <div class="row">
@@ -175,9 +175,9 @@ function renderPanel({title, tag, history, forecast=null, showConfidence=true}){
   /*if (showConfidence){
     const conf = computeConfidence(history);
     header += `<div class="kv">可信度：<b>${conf.score}</b>（完整度 ${conf.coverage}%${conf.cv!=null ? `、穩定度指標 ${conf.cv}`:''}）</div>`;
-  }*/
+  }
   header += `</div><canvas id="priceChart" height="260"></canvas></div>`;
-  root.innerHTML = header;
+  root.innerHTML = header;*/
 
   // 資料
   let labels   = history.map(x=>x.date);
