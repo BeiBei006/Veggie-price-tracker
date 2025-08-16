@@ -85,7 +85,7 @@ async function renderLibraryDetail(id){
     tag: '資料庫',
     history: hist,
     forecast: fc,
-    showConfidence: true    // 資料庫頁面顯示可信度
+    showConfidence: false    // 資料庫頁面顯示可信度
   });
 }
 
