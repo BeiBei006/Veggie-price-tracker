@@ -166,18 +166,19 @@ function renderPanel({title, tag, history, forecast=null, showConfidence=true}){
   const endStr   = [...history].reverse().find(x=>x.price!=null)?.date || history[history.length-1].date;
 
   // Header（依 showConfidence 決定是否顯示）
- /* let header = `
+  showConfidence = false;
+  let header = `
     <div class="panel">
       <h2 style="margin:0 0 6px">${title}</h2>
       <div class="row">
         <div class="kv">資料來源：<b>${tag}</b></div>
         <div class="kv">區間：<b>${startStr} ~ ${endStr}</b></div>`;
-  /*if (showConfidence){
+  if (showConfidence){
     const conf = computeConfidence(history);
     header += `<div class="kv">可信度：<b>${conf.score}</b>（完整度 ${conf.coverage}%${conf.cv!=null ? `、穩定度指標 ${conf.cv}`:''}）</div>`;
   }
   header += `</div><canvas id="priceChart" height="260"></canvas></div>`;
-  root.innerHTML = header;*/
+  root.innerHTML = header;
 
   // 資料
   let labels   = history.map(x=>x.date);
